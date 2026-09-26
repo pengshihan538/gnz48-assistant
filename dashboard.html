@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GNZ48 理想座位竞价图表</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: light-dark(#f5f7fb, #10131a);
+      --surface: light-dark(#ffffff, #191e28);
+      --surface-2: light-dark(#eef2f8, #242b38);
+      --text: light-dark(#172033, #f1f4f9);
+      --muted: light-dark(#667085, #aeb8c8);
+      --border: light-dark(#dce3ed, #313a49);
+      --primary: light-dark(#3157d5, #7d9cff);
+      --primary-soft: light-dark(#dfe7ff, #29365f);
+      --stretch: light-dark(#d67a18, #f1a94e);
+      --stretch-soft: light-dark(#ffebd3, #51371d);
+      --good: light-dark(#16794c, #55d69b);
+      --shadow: light-dark(0 14px 40px rgba(34, 50, 84, .09), 0 14px 40px rgba(0, 0, 0, .22));
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    }
+    main { max-width: 1280px; margin: 0 auto; padding: 30px; }
+    header { display: flex; justify-content: space-between; gap: 20px; align-items: end; margin-bottom: 18px; }
+    h1, h2 { margin: 0; font-weight: 600; }
+    h1 { font-size: 26px; }
+    h2 { font-size: 18px; margin-bottom: 14px; }
+    .muted { color: var(--muted); }
+    .clock-panel { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .clock { font-size: 20px; font-weight: 600; letter-spacing: .02em; }
+    .updated { margin-top: 4px; }
+    .refresh-button {
+      margin-top: 9px;
+      padding: 7px 14px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--surface);
+      color: var(--text);
+      font: inherit;
+    }
+    .refresh-button:hover:not(:disabled) { background: var(--surface-2); }
+    .refresh-button:disabled { color: var(--muted); opacity: .75; }
+    .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+    .card, section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+    }
+    .card { padding: 15px 16px; }
+    .label { color: var(--muted); font-size: 13px; margin-bottom: 7px; }
+    .value { font-size: 25px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .subvalue { margin-top: 5px; color: var(--muted); font-size: 13px; }
+    .recommendation {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 15px 17px;
+      margin-bottom: 14px;
+      border-left: 5px solid var(--primary);
+    }
+    .recommendation strong { font-size: 18px; }
+    .layout { display: grid; grid-template-columns: 1fr; gap: 18px; }
+    section { padding: 24px; min-width: 0; }
+    .legend { display: flex; flex-wrap: wrap; gap: 16px; color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .swatch { width: 18px; height: 8px; border-radius: 99px; background: var(--primary); }
+    .swatch.stretch { background: var(--stretch); }
+    .band-row {
+      display: grid;
+      grid-template-columns: 220px minmax(360px, 1fr) 220px;
+      gap: 24px;
+      align-items: center;
+      padding: 18px 0;
+      border-top: 1px solid var(--border);
+    }
+    .band-row:first-child { border-top: 0; }
+    .band-row.is-empty { padding-top: 13px; padding-bottom: 13px; }
+    .band-row.is-empty .band-name, .band-row.is-empty .mini-empty { opacity: .72; }
+    .band-row.is-empty .mini-hist { height: 42px; padding-top: 0; }
+    .band-name { font-size: 14px; }
+    .band-name b { display: block; font-weight: 600; }
+    .priority { color: var(--muted); font-size: 12px; margin-top: 3px; }
+    .mini-hist { height: 88px; display: flex; align-items: end; justify-content: center; gap: 12px; padding: 6px 12px 0; border-bottom: 1px solid var(--border); }
+    .mini-col { flex: 1 1 0; min-width: 30px; max-width: 68px; height: 82px; display: grid; grid-template-rows: 17px 1fr 19px; align-items: end; text-align: center; font-variant-numeric: tabular-nums; }
+    .mini-count, .mini-price { color: var(--muted); font-size: 12px; }
+    .mini-bar { width: 64%; min-height: 3px; margin: 0 auto; border-radius: 6px 6px 0 0; background: var(--primary); }
+    .mini-bar.stretch { background: var(--stretch); }
+    .mini-empty { align-self: center; width: 100%; text-align: center; color: var(--muted); font-size: 13px; }
+    .band-advice { text-align: right; font-variant-numeric: tabular-nums; }
+    .band-advice b { display: block; color: var(--good); font-size: 15px; }
+    .band-advice .range, .band-advice .buffer { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+    #histogram { width: 100%; height: 230px; display: block; }
+    #histogram text { fill: var(--muted); font: 12px "Segoe UI", "Microsoft YaHei", sans-serif; }
+    #histogram .axis-line { stroke: var(--border); stroke-width: 1; }
+    #histogram .bar { fill: var(--primary); }
+    #histogram .bar.recommended { fill: var(--good); }
+    .empty { color: var(--muted); padding: 28px 0; text-align: center; }
+    @media (max-width: 900px) {
+      .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .band-row { grid-template-columns: 190px minmax(280px, 1fr) 190px; gap: 16px; }
+    }
+    @media (max-width: 620px) {
+      main { padding: 15px; }
+      header { align-items: start; flex-direction: column; }
+      .summary { grid-template-columns: 1fr 1fr; }
+      .band-row { grid-template-columns: 1fr; gap: 10px; }
+      .band-advice { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>理想座位竞价图表</h1>
+        <div class="muted">只按每位竞拍者的最高出价计入排名</div>
+      </div>
+      <div class="clock-panel">
+        <div class="clock"><span class="muted">北京时间 </span><span id="current-time">----/--/-- --:--:--.---</span></div>
+        <div class="updated muted">数据更新时间：<span id="updated-at">等待数据</span></div>
+        <div class="updated muted" id="scan-status">分页校验：等待完整扫描</div>
+        <button class="refresh-button" id="manual-refresh" type="button">立即刷新</button>
+      </div>
+    </header>
+
+    <div class="summary" aria-live="polite">
+      <div class="card"><div class="label">你的最高出价</div><div class="value" id="my-price">—</div><div class="subvalue" id="my-band">尚未出价</div></div>
+      <div class="card"><div class="label">你的当前排名</div><div class="value" id="my-rank">—</div><div class="subvalue">同价按后出者靠后估算</div></div>
+      <div class="card"><div class="label">去重竞拍者</div><div class="value" id="bidder-count">—</div><div class="subvalue">一人只占一个名次</div></div>
+      <div class="card"><div class="label">当前最高价</div><div class="value" id="highest-price">—</div><div class="subvalue">本场最高有效出价</div></div>
+    </div>
+
+    <div class="card recommendation" aria-live="polite">
+      <strong id="recommendation-price">等待排名数据</strong>
+      <span id="recommendation-text" class="muted"></span>
+    </div>
+
+    <div class="layout">
+      <section>
+        <h2>各理想座位区间的实际价格分布与稳健建议</h2>
+        <div class="legend"><span><i class="swatch"></i>柱高＝该价位的去重竞拍人数</span></div>
+        <div id="target-bands"><div class="empty">等待完整排名数据</div></div>
+      </section>
+
+      <section>
+        <h2>全部具体价格分布</h2>
+        <svg id="histogram" role="img" aria-label="各具体价格的去重竞拍人数柱状图"></svg>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const byId = (id) => document.getElementById(id);
+    const money = (value) => Number.isFinite(value) ? `¥${value}` : '—';
+    const beijingClock = new Intl.DateTimeFormat('zh-CN-u-ca-gregory-nu-latn', {
+      timeZone: 'Asia/Shanghai',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      fractionalSecondDigits: 3,
+      hourCycle: 'h23',
+    });
+
+    function updateCurrentTime() {
+      const parts = Object.fromEntries(
+        beijingClock.formatToParts(new Date())
+          .filter((part) => part.type !== 'literal')
+          .map((part) => [part.type, part.value]),
+      );
+      byId('current-time').textContent = `${parts.year}/${parts.month}/${parts.day} ${parts.hour}:${parts.minute}:${parts.second}.${parts.fractionalSecond}`;
+      requestAnimationFrame(updateCurrentTime);
+    }
+    requestAnimationFrame(updateCurrentTime);
+
+    const refreshButton = byId('manual-refresh');
+    refreshButton.addEventListener('click', async () => {
+      refreshButton.disabled = true;
+      refreshButton.textContent = '正在刷新…';
+      try {
+        if (typeof window.requestAuctionRefresh !== 'function') throw new Error('监控连接未就绪');
+        await window.requestAuctionRefresh();
+      } catch (error) {
+        refreshButton.textContent = '刷新失败，请重试';
+        refreshButton.disabled = false;
+      }
+    });
+
+    window.setManualRefreshStatus = (text, done = false) => {
+      refreshButton.textContent = text || '立即刷新';
+      refreshButton.disabled = !done;
+    };
+
+    function renderBands(data) {
+      const host = byId('target-bands');
+      host.replaceChildren();
+
+      data.targetBands.forEach((band) => {
+        const row = document.createElement('div');
+        row.className = 'band-row';
+        if (!band.observedDistribution.length) row.classList.add('is-empty');
+        const name = document.createElement('div');
+        name.className = 'band-name';
+        name.innerHTML = `<b>${band.label}</b><div class="priority">偏好顺序 ${band.priority}</div>`;
+
+        const chart = document.createElement('div');
+        chart.className = 'mini-hist';
+        if (!band.observedDistribution.length) {
+          const empty = document.createElement('div');
+          empty.className = 'mini-empty';
+          empty.textContent = '当前参与人数尚未覆盖这个排名区间';
+          chart.appendChild(empty);
+        } else {
+          const maxCount = Math.max(...band.observedDistribution.map((item) => item.count), 1);
+          band.observedDistribution.forEach((item) => {
+            const col = document.createElement('div');
+            col.className = 'mini-col';
+            const count = document.createElement('span');
+            count.className = 'mini-count';
+            count.textContent = `${item.count}人`;
+            const bar = document.createElement('i');
+            bar.className = 'mini-bar';
+            bar.style.height = `${Math.max(9, (item.count / maxCount) * 47)}px`;
+            const price = document.createElement('span');
+            price.className = 'mini-price';
+            price.textContent = money(item.price);
+            col.append(count, bar, price);
+            chart.appendChild(col);
+          });
+        }
+
+        const advice = document.createElement('div');
+        advice.className = 'band-advice';
+        const rangeText = band.intervals.length
+          ? band.intervals.map((item) => item.min === item.max ? money(item.min) : `${money(item.min)}–${money(item.max)}`).join('、')
+          : '暂无可行价';
+        if (data.ended) {
+          advice.innerHTML = `<b>最终记录</b><span class="range">此区间 ${band.observedCount} 人</span>`;
+        } else if (band.stableRecommendation) {
+          const stable = band.stableRecommendation;
+          advice.innerHTML = `<b>${stable.hold ? '保持' : '稳健建议'} ${money(stable.price)}</b><span class="buffer">预计第${stable.rank}名 · 缓冲${stable.buffer}名</span><span class="range">可行价 ${rangeText}</span>`;
+        } else {
+          advice.innerHTML = `<b>等待更多参与者</b><span class="range">${rangeText}</span>`;
+        }
+        row.append(name, chart, advice);
+        host.appendChild(row);
+      });
+    }
+
+    function renderHistogram(data) {
+      const svg = byId('histogram');
+      const points = data.exactDistribution
+        .sort((a, b) => a.price - b.price);
+      const width = Math.max(360, svg.clientWidth || 480);
+      const height = 270;
+      const margin = { top: 18, right: 12, bottom: 38, left: 38 };
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      svg.replaceChildren();
+
+      if (!points.length) {
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', width / 2);
+        text.setAttribute('y', height / 2);
+        text.setAttribute('text-anchor', 'middle');
+        text.textContent = '暂无有效出价';
+        svg.appendChild(text);
+        return;
+      }
+
+      const maxCount = Math.max(...points.map((item) => item.count), 1);
+      const step = innerWidth / points.length;
+      const barWidth = Math.max(3, Math.min(24, step * 0.68));
+      const ns = 'http://www.w3.org/2000/svg';
+      const axis = document.createElementNS(ns, 'line');
+      axis.setAttribute('class', 'axis-line');
+      axis.setAttribute('x1', margin.left);
+      axis.setAttribute('x2', width - margin.right);
+      axis.setAttribute('y1', margin.top + innerHeight);
+      axis.setAttribute('y2', margin.top + innerHeight);
+      svg.appendChild(axis);
+
+      points.forEach((item, index) => {
+        const x = margin.left + index * step + (step - barWidth) / 2;
+        const barHeight = Math.max(2, (item.count / maxCount) * innerHeight);
+        const y = margin.top + innerHeight - barHeight;
+        const rect = document.createElementNS(ns, 'rect');
+        rect.setAttribute('class', `bar${item.price === data.recommendation.price ? ' recommended' : ''}`);
+        rect.setAttribute('x', x);
+        rect.setAttribute('y', y);
+        rect.setAttribute('width', barWidth);
+        rect.setAttribute('height', barHeight);
+        rect.setAttribute('rx', Math.min(4, barWidth / 2));
+        const title = document.createElementNS(ns, 'title');
+        title.textContent = `${money(item.price)}：${item.count}人`;
+        rect.appendChild(title);
+        svg.appendChild(rect);
+
+        if (points.length <= 16 || index === 0 || index === points.length - 1 || item.price === data.recommendation.price) {
+          const label = document.createElementNS(ns, 'text');
+          label.setAttribute('x', x + barWidth / 2);
+          label.setAttribute('y', height - 13);
+          label.setAttribute('text-anchor', 'middle');
+          label.textContent = item.price;
+          svg.appendChild(label);
+        }
+      });
+
+      const maxLabel = document.createElementNS(ns, 'text');
+      maxLabel.setAttribute('x', 3);
+      maxLabel.setAttribute('y', margin.top + 4);
+      maxLabel.textContent = `${maxCount}人`;
+      svg.appendChild(maxLabel);
+
+    }
+
+    window.updateAuctionDashboard = (data) => {
+      window.__auctionData = data;
+      byId('updated-at').textContent = data.updatedAt;
+      byId('scan-status').textContent = data.scanMeta
+        ? `分页校验：${data.scanMeta.pagesRead}/${data.scanMeta.totalPages}页 · 原始${data.scanMeta.rawRows}条 · 去重${data.bidderCount}人`
+        : '分页校验：等待完整扫描';
+      byId('my-price').textContent = money(data.current.price);
+      byId('my-rank').textContent = data.current.rank ? `第${data.current.rank}名` : '—';
+      byId('my-band').textContent = data.current.band || '尚未进入目标中间区间';
+      byId('bidder-count').textContent = `${data.bidderCount}人`;
+      byId('highest-price').textContent = money(data.highestPrice);
+      byId('recommendation-price').textContent = data.ended
+        ? '竞价已结束'
+        : data.recommendation.price ? `建议 ${money(data.recommendation.price)}` : '当前建议';
+      byId('recommendation-text').textContent = data.recommendation.message;
+      renderBands(data);
+      renderHistogram(data);
+    };
+
+    addEventListener('resize', () => {
+      if (window.__auctionData) renderHistogram(window.__auctionData);
+    });
+  </script>
+</body>
+</html>

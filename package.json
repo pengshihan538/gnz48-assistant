@@ -1,0 +1,16 @@
+{
+  "name": "gnz48-assistant",
+  "version": "1.0.0",
+  "private": true,
+  "description": "gnz48竞价切票助手：GNZ48 竞价排名与价格分布只读监控",
+  "main": "http-monitor.js",
+  "scripts": {
+    "start": "powershell.exe -NoProfile -STA -File desktop.ps1",
+    "start:legacy": "node monitor.js",
+    "test": "node --test tests/*.test.js",
+    "check:live": "node http-monitor.js --once --summary"
+  },
+  "dependencies": {
+    "playwright-core": "^1.55.0"
+  }
+}
